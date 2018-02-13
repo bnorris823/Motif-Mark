@@ -1,8 +1,10 @@
-
+import argparse
+import
 
 
 
 def get_parts(line):
+    '''Split fasta sequence into pre-intron, exon, and post-intron parts. returned as a list.'''
     pre_intron = ""
     post_intron = ""
     exon = ""
@@ -24,6 +26,7 @@ def get_parts(line):
 
 
 def fasta_to_dict(file):
+    '''Takes a fasta file and makes each entry a key value pair in a dictionary'''
     with open(file)as fh:
         fasta_dict = {}
         header = ""
@@ -41,16 +44,24 @@ def fasta_to_dict(file):
 
     return fasta_dict
 
-def parse_motif(motif):
+
+
+
+def parse_motifs(motif):
+    '''Takes a motif and adds it to a dict with a list of the possible chars at each position as its value.'''
     motif_list = []
     for c in motif:
         motif_list.append(base_dict[c])
 
-    return motif_list
+    if motif not in motif_dict:
+        motif_dict[motif] = motif_list
+
 
 
 base_dict = {"A": "Aa", "T":"Tt", "C":"Cc", "G":"Gg", "U":"Uu",
               "R": "AaGg", "Y":"TtCcUu", "S":"CcGg", "W":"AaTtUu",
               "K":"GgTtUu", "M":"AaCc", "B":"CcGgTtUu", "D":"AaGgTtUu",
               "H":"AaCcTtUu", "V":"AaCcGg", "N":"AaTtCcGgUu"}
+
+motif_dict = {}
 
