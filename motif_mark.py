@@ -63,7 +63,7 @@ def fasta_to_dict(file):
                 seq += line
                 first = False
 
-    fasta_dict[header] = seq
+    fasta_dict[header] = get_parts(seq)
     return fasta_dict
 
 
@@ -119,39 +119,26 @@ def get_positions(header, seq):
 
 
 
-def rev_dict(dict):
-    new_dict = {}
-    for key in dict.keys():
-        new_key = dict[key]
-        new_value = key
-        new_dict[new_key] = new_value
-
-    return new_dict
-
 base_dict = {"A": "Aa", "T":"Tt", "C":"Cc", "G":"Gg", "U":"Uu",
               "R": "AaGg", "Y":"TtCcUu", "S":"CcGg", "W":"AaTtUu",
               "K":"GgTtUu", "M":"AaCc", "B":"CcGgTtUu", "D":"AaGgTtUu",
               "H":"AaCcTtUu", "V":"AaCcGg", "N":"AaTtCcGgUu"}
 
-rev_base_dict = rev_dict(base_dict)
 
 #args = get_arguments()
 
-fasta_dict = fasta_to_dict("test.fa") #args.f
-motif_dict = parse_motifs("motifs_test.txt") #args.m
-fasta_pos_list = []
+fasta_file= "test.fa" #args.f
+motif_file = "motifs_test.txt" #args.m
 
+def find_all_motifs(fasta_file, motifs_file):
+    fasta_dict = fasta_to_dict("test.fa")
+    motif_dict = parse_motifs("motifs_test.txt")
+    fasta_pos_list = []
 
+    for item in fasta_dict.items():
+        seq = "".join(fasta_dict[item[0]])
+        pos = get_positions(item[0], seq)
+        pos["exon"] = len(get_exon(seq))
+        fasta_pos_list.append(pos)
 
-for item in fasta_dict.items():
-    seq = "".join(fasta_dict[item[0]])
-    pos = get_positions(item[0], seq)
-    fasta_pos_list.append(pos)
-
-for f in fasta_pos_list:
-    for key in f.keys():
-        print(f[key])
-
-
-
-
+    return fasta_pos_list
