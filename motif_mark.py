@@ -1,5 +1,6 @@
 import argparse
 import cairo
+import random
 
 
 def get_arguments():
@@ -8,7 +9,6 @@ def get_arguments():
     parser.add_argument("-m", help="set motif file", required=False, type=bool)
 
     return parser.parse_args()
-
 
 def get_parts(line):
     '''Split fasta sequence into pre-intron, exon, and post-intron parts. returned as a list.'''
@@ -28,8 +28,6 @@ def get_parts(line):
 
     return [pre_intron, exon, post_intron]
 
-
-
 def get_exon(line):
     '''finds exon in fasta sequence and return it'''
     exon = ""
@@ -39,9 +37,6 @@ def get_exon(line):
             exon = exon + c
 
     return exon
-
-
-
 
 def fasta_to_dict(file):
     '''Takes a fasta file and makes each entry a key value pair in a dictionary'''
@@ -66,9 +61,6 @@ def fasta_to_dict(file):
     fasta_dict[header] = get_parts(seq)
     return fasta_dict
 
-
-
-
 def parse_motifs(motif_file):
     '''Takes a list of motifs and creates a list of possible chars for each motif.'''
     motif_list = []
@@ -88,12 +80,7 @@ def parse_motifs(motif_file):
 
     return motif_dict
 
-
-
-
-
-
-def get_positions(header, seq):
+def get_positions(header, seq, motif_dict):
     positions = {}
     for motif in motif_dict.keys():
         chars = motif_dict[motif]
@@ -117,12 +104,56 @@ def get_positions(header, seq):
 
     return positions
 
-
-
 base_dict = {"A": "Aa", "T":"Tt", "C":"Cc", "G":"Gg", "U":"Uu",
               "R": "AaGg", "Y":"TtCcUu", "S":"CcGg", "W":"AaTtUu",
               "K":"GgTtUu", "M":"AaCc", "B":"CcGgTtUu", "D":"AaGgTtUu",
               "H":"AaCcTtUu", "V":"AaCcGg", "N":"AaTtCcGgUu"}
+
+def find_all_motifs(fasta_file, motifs_file):
+    fasta_dict = fasta_to_dict(fasta_file)
+    motif_dict = parse_motifs(motifs_file)
+    fasta_pos_list = []
+
+    for item in fasta_dict.items():
+        seq = "".join(fasta_dict[item[0]])
+        pos = get_positions(item[0], seq, motif_dict)
+
+        pos["intron1"] = len(fasta_dict[item[0]][0])
+        pos["exon"] = len(fasta_dict[item[0]][1])
+        pos["intron2"] = len(fasta_dict[item[0]][2])
+
+        fasta_pos_list.append(pos)
+
+    return fasta_pos_list
+
+###############################################################
+
+def draw_exon(intron1 ,ex_len, intron2, context, start):
+    context.move_to(start[0], start[1])
+    context.line_to(start[0] + intron1 + all_pos[0]["exon"] + intron2, start[1])
+    context.stroke()
+
+
+    context.set_line_width(10)
+    context.move_to(start[0] + intron1, start[1])
+    context.line_to(start[0] + intron1 + all_pos[0]["exon"], 50)
+    context.stroke()
+
+
+
+
+
+def draw_motifs(pos_list, context, start, motif = "YGCY"):
+    context.set_line_width(10)
+    context.set_source_rgb(random.randint(0,256),random.randint(0,256), random.randint(0,256))
+
+    for pos in pos_list:
+        context.move_to(start[0] + pos, start[1])
+        context.line_to(pos + len(motif), 50)
+        context.stroke()
+
+
+
 
 
 #args = get_arguments()
@@ -130,15 +161,15 @@ base_dict = {"A": "Aa", "T":"Tt", "C":"Cc", "G":"Gg", "U":"Uu",
 fasta_file= "test.fa" #args.f
 motif_file = "motifs_test.txt" #args.m
 
-def find_all_motifs(fasta_file, motifs_file):
-    fasta_dict = fasta_to_dict("test.fa")
-    motif_dict = parse_motifs("motifs_test.txt")
-    fasta_pos_list = []
+all_pos = find_all_motifs(fasta_file, motif_file)
+print(all_pos)
 
-    for item in fasta_dict.items():
-        seq = "".join(fasta_dict[item[0]])
-        pos = get_positions(item[0], seq)
-        pos["exon"] = len(get_exon(seq))
-        fasta_pos_list.append(pos)
+surface = cairo.SVGSurface("plot.svg", 1400, 1000)
+context = cairo.Context(surface)
+context.set_line_width(1)
 
-    return fasta_pos_list
+draw_exon(all_pos[0]["intron1"], all_pos[0]["exon"], all_pos[0]["intron2"], context, [50,50])
+
+#for m in all_pos[0].items():
+    #if m[0][0] == ">":
+        #draw_motifs(m[1], context, [50,50])
