@@ -104,7 +104,7 @@ def get_positions(header, seq, motif_dict):
 
     return positions
 
-base_dict = {"A": "Aa", "T":"Tt", "C":"Cc", "G":"Gg", "U":"Uu",
+base_dict = {"A": "Aa", "T":"TtUu", "C":"Cc", "G":"Gg", "U":"UuTt",
               "R": "AaGg", "Y":"TtCcUu", "S":"CcGg", "W":"AaTtUu",
               "K":"GgTtUu", "M":"AaCc", "B":"CcGgTtUu", "D":"AaGgTtUu",
               "H":"AaCcTtUu", "V":"AaCcGg", "N":"AaTtCcGgUu"}
@@ -116,6 +116,7 @@ def find_all_motifs(fasta_file, motifs_file):
 
     for item in fasta_dict.items():
         seq = "".join(fasta_dict[item[0]])
+
         pos = get_positions(item[0], seq, motif_dict)
 
         pos["intron1"] = len(fasta_dict[item[0]][0])
@@ -129,6 +130,9 @@ def find_all_motifs(fasta_file, motifs_file):
 ###############################################################
 
 def draw_exon(intron1 ,ex_len, intron2, context, start):
+    context.set_line_width(1)
+    context.set_source_rgb(0,0,0)
+
     context.move_to(start[0], start[1])
     context.line_to(start[0] + intron1 + all_pos[0]["exon"] + intron2, start[1])
     context.stroke()
@@ -136,21 +140,41 @@ def draw_exon(intron1 ,ex_len, intron2, context, start):
 
     context.set_line_width(10)
     context.move_to(start[0] + intron1, start[1])
-    context.line_to(start[0] + intron1 + all_pos[0]["exon"], 50)
+    context.line_to(start[0] + intron1 + all_pos[0]["exon"], start[1])
     context.stroke()
 
 
 
 
 
-def draw_motifs(pos_list, context, start, motif = "YGCY"):
+def draw_motifs(pos_list, context, start, motif):
+    red = random.random()
+    green = random.random()
+    blue = random.random()
+
     context.set_line_width(10)
-    context.set_source_rgb(random.randint(0,256),random.randint(0,256), random.randint(0,256))
+    context.set_source_rgb(red, green, blue)
+
 
     for pos in pos_list:
         context.move_to(start[0] + pos, start[1])
-        context.line_to(pos + len(motif), 50)
+        context.line_to(start[0] + pos + len(motif), start[1])
         context.stroke()
+
+        context.move_to(start[0] + pos, start[1] - 20)
+        context.show_text(str(pos))
+
+    return [red, green, blue]
+
+def draw_legend(red, green, blue, start, drop, motif):
+    context.set_source_rgb(red, green, blue)
+    context.move_to(start[0] - 50, start[1] + drop)
+    context.show_text(motif)
+
+def draw_title(start, name):
+    context.set_source_rgb(0,0,0)
+    context.move_to(start[0] - 100, start[1])
+    context.show_text(name)
 
 
 
@@ -162,14 +186,28 @@ fasta_file= "test.fa" #args.f
 motif_file = "motifs_test.txt" #args.m
 
 all_pos = find_all_motifs(fasta_file, motif_file)
-print(all_pos)
+for f in all_pos:
+    print(f)
 
-surface = cairo.SVGSurface("plot.svg", 1400, 1000)
+surface = cairo.SVGSurface("plot.svg", 1600, 1000)
 context = cairo.Context(surface)
 context.set_line_width(1)
+start = [200,100]
 
-draw_exon(all_pos[0]["intron1"], all_pos[0]["exon"], all_pos[0]["intron2"], context, [50,50])
+for f in all_pos:
+    draw_exon(f["intron1"], f["exon"], f["intron2"], context, start)
 
-#for m in all_pos[0].items():
-    #if m[0][0] == ">":
-        #draw_motifs(m[1], context, [50,50])
+    drop = -20
+    for m in f.items():
+        if m[0][0] == ">":
+            motif = m[0].split("_")
+            motif = motif[1]
+            gene = m[0].split(" ")
+            gene = gene[0][1:]
+
+            color = draw_motifs(m[1], context, start, motif)
+            draw_title(start, gene)
+            draw_legend(color[0], color[1], color[2], start, drop, motif)
+            drop = drop + 10
+
+    start = [start[0], start[1] + 100]
