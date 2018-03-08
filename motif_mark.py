@@ -6,7 +6,7 @@ import random
 def get_arguments():
     parser = argparse.ArgumentParser(description="Python script to display binding site motifs around exons")
     parser.add_argument("-f", help="set fasta filename", required=True, type=str)
-    parser.add_argument("-m", help="set motif file", required=False, type=bool)
+    parser.add_argument("-m", help="set motif file", required=True, type=str)
 
     return parser.parse_args()
 
@@ -27,16 +27,6 @@ def get_parts(line):
             pre_intron = pre_intron + c
 
     return [pre_intron, exon, post_intron]
-
-def get_exon(line):
-    '''finds exon in fasta sequence and return it'''
-    exon = ""
-
-    for c in line:
-        if c.isupper():
-            exon = exon + c
-
-    return exon
 
 def fasta_to_dict(file):
     '''Takes a fasta file and makes each entry a key value pair in a dictionary'''
@@ -77,7 +67,6 @@ def parse_motifs(motif_file):
             chars.append(base_dict[c])
         motif_dict[motif] = chars
 
-
     return motif_dict
 
 def get_positions(header, seq, motif_dict):
@@ -110,6 +99,7 @@ base_dict = {"A": "Aa", "T":"TtUu", "C":"Cc", "G":"Gg", "U":"UuTt",
               "H":"AaCcTtUu", "V":"AaCcGg", "N":"AaTtCcGgUu"}
 
 def find_all_motifs(fasta_file, motifs_file):
+    '''Finds positions of all motifs and returns as dictionary'''
     fasta_dict = fasta_to_dict(fasta_file)
     motif_dict = parse_motifs(motifs_file)
     fasta_pos_list = []
@@ -130,24 +120,22 @@ def find_all_motifs(fasta_file, motifs_file):
 ###############################################################
 
 def draw_exon(intron1 ,ex_len, intron2, context, start):
+    '''Draws the intron and exon lines'''
     context.set_line_width(1)
     context.set_source_rgb(0,0,0)
 
     context.move_to(start[0], start[1])
-    context.line_to(start[0] + intron1 + all_pos[0]["exon"] + intron2, start[1])
+    context.line_to(start[0] + intron1 + ex_len + intron2, start[1])
     context.stroke()
 
 
     context.set_line_width(10)
     context.move_to(start[0] + intron1, start[1])
-    context.line_to(start[0] + intron1 + all_pos[0]["exon"], start[1])
+    context.line_to(start[0] + intron1 + ex_len, start[1])
     context.stroke()
 
-
-
-
-
 def draw_motifs(pos_list, context, start, motif):
+    '''draws the position of the motifs on the introns/exon. Returns the color values for motif'''
     red = random.random()
     green = random.random()
     blue = random.random()
@@ -167,11 +155,13 @@ def draw_motifs(pos_list, context, start, motif):
     return [red, green, blue]
 
 def draw_legend(red, green, blue, start, drop, motif):
+    '''Draws the legend with motifs in color'''
     context.set_source_rgb(red, green, blue)
     context.move_to(start[0] - 50, start[1] + drop)
     context.show_text(motif)
 
 def draw_title(start, name):
+    '''draws the name of the gene next to the legend'''
     context.set_source_rgb(0,0,0)
     context.move_to(start[0] - 100, start[1])
     context.show_text(name)
@@ -180,28 +170,31 @@ def draw_title(start, name):
 
 
 
-#args = get_arguments()
+args = get_arguments()
 
-fasta_file= "test.fa" #args.f
-motif_file = "motifs_test.txt" #args.m
+fasta_file= args.f
+motif_file = args.m
 
+#create list of dictionaries of motif positions for each fasta entry
 all_pos = find_all_motifs(fasta_file, motif_file)
-for f in all_pos:
-    print(f)
 
+#create pycairo object and set start position
 surface = cairo.SVGSurface("plot.svg", 1600, 1000)
 context = cairo.Context(surface)
 context.set_line_width(1)
 start = [200,100]
 
+#draw introns/exons and their associated motif positions
 for f in all_pos:
     draw_exon(f["intron1"], f["exon"], f["intron2"], context, start)
 
-    drop = -20
+    drop = -20 #value for centering the legend text
     for m in f.items():
         if m[0][0] == ">":
+            #get motif from key
             motif = m[0].split("_")
             motif = motif[1]
+            #get gene name from key
             gene = m[0].split(" ")
             gene = gene[0][1:]
 
@@ -211,3 +204,4 @@ for f in all_pos:
             drop = drop + 10
 
     start = [start[0], start[1] + 100]
+
